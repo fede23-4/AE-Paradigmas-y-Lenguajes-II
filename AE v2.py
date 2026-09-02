@@ -7,7 +7,7 @@ class Sabor:
     def __init__(self, id, nombre, elaboracion, precio_por_kilo):
         self.id = id
         self.nombre = nombre
-        self.elaboracion = elaboracion  
+        self.elaboracion = elaboracion
         self.precio_por_kilo = precio_por_kilo
 
     def __str__(self):
@@ -17,9 +17,9 @@ class Sabor:
 class Recipiente:
     def __init__(self, id, nombre, kilos, porcentaje_incremento):
         self.id = id
-        self.nombre = nombre                               
-        self.kilos = kilos                                
-        self.porcentaje_incremento = porcentaje_incremento  
+        self.nombre = nombre
+        self.kilos = kilos
+        self.porcentaje_incremento = porcentaje_incremento
 
     def __str__(self):
         return f"{self.nombre} ({self.kilos} kg)"
@@ -60,7 +60,8 @@ class Venta:
         return (f"Venta de {self.kilos} kg de {self.pote.sabor.nombre} "
                 f"en {self.recipiente.nombre}: ${self.calcular_precio_total():.2f}")
 
-#Logica de la heladeria
+
+# Logica de la heladeria
 class Heladeria:
     def __init__(self):
         self.potes = []
@@ -68,7 +69,6 @@ class Heladeria:
         self.sabores = []
         self.recipientes = []
 
-    
     def agregar_pote(self, pote):
         self.potes.append(pote)
 
@@ -83,8 +83,6 @@ class Heladeria:
         pote.registrar_venta(venta.calcular_kilos(), venta.calcular_precio_total())
         self.ventas.append(venta)
         return venta
-
-    
 
     def kilos_por_sabor(self):
         resultado = defaultdict(float)
@@ -104,11 +102,11 @@ class Heladeria:
             resultado[venta.pote.sabor.nombre] += 1
         return resultado
 
-    #Punto 1
+    # Punto 1
     def recaudacion_total(self):
         return sum(venta.calcular_precio_total() for venta in self.ventas)
 
-    #Punto 2
+    # Punto 2
     def pote_mas_servido(self):
         if not self.potes:
             return None
@@ -119,41 +117,41 @@ class Heladeria:
             return None
         return min(self.potes, key=lambda pote: pote.kilos_servidos)
 
-    #Punto 3
+    # Punto 3
     def pote_mas_recaudado(self):
         if not self.potes:
             return None
         return max(self.potes, key=lambda pote: pote.dinero_recaudado)
 
-    #Punto 4 (cantidad de ventas)
+    # Punto 4
     def sabor_mas_vendido(self):
         resultado = self.cantidad_ventas_por_sabor()
         if not resultado:
             return None
         return max(resultado, key=resultado.get)
 
-    #Punto 5
+    # Punto 5
     def sabor_mas_recaudado(self):
         resultado = self.recaudacion_por_sabor()
         if not resultado:
             return None
         return max(resultado, key=resultado.get)
 
-    #Punto 6
+    # Punto 6
     def sabor_mas_kilos_vendidos(self):
         resultado = self.kilos_por_sabor()
         if not resultado:
             return None
         return max(resultado, key=resultado.get)
 
-    #Punto 7
+    # Punto 7
     def sabor_menos_kilos_vendidos(self):
         resultado = self.kilos_por_sabor()
         if not resultado:
             return None
         return min(resultado, key=resultado.get)
 
-    #Punto 8 
+    # Punto 8
     def recipiente_mas_solicitado(self):
         if not self.ventas:
             return None
@@ -162,7 +160,7 @@ class Heladeria:
             resultado[venta.recipiente.nombre] += 1
         return max(resultado, key=resultado.get)
 
-    #Punto 9 
+    # Punto 9
     def porcentaje_venta_por_sabor(self):
         total = len(self.ventas)
         if total == 0:
@@ -170,7 +168,7 @@ class Heladeria:
         cantidades = self.cantidad_ventas_por_sabor()
         return {sabor: (cantidad / total) * 100 for sabor, cantidad in cantidades.items()}
 
-    #Punto 10 
+    # Punto 10
     def porcentaje_recaudacion_por_sabor(self):
         total = self.recaudacion_total()
         if total == 0:
@@ -178,14 +176,14 @@ class Heladeria:
         recaudacion = self.recaudacion_por_sabor()
         return {sabor: (monto / total) * 100 for sabor, monto in recaudacion.items()}
 
-    #Punto 11
+    # Punto 11
     def porcentaje_venta_por_pote(self):
         total_kilos = sum(p.kilos_servidos for p in self.potes)
         if total_kilos == 0:
             return {}
         return {pote.id: (pote.kilos_servidos / total_kilos) * 100 for pote in self.potes}
 
-    #Punto 12 
+    # Punto 12
     def porcentaje_recaudacion_por_pote(self):
         total = self.recaudacion_total()
         if total == 0:
@@ -193,129 +191,250 @@ class Heladeria:
         return {pote.id: (pote.dinero_recaudado / total) * 100 for pote in self.potes}
 
 
-#Interfaz
-
+# Interfaz mejorada
 class HeladeriaGUI:
     def __init__(self, heladeria):
         self.heladeria = heladeria
         self.ventana = tk.Tk()
-        self.ventana.title("Heladería")
-        self.ventana.geometry("520x520")
+        self.ventana.title("Heladeria - Sistema de Gestion")
+        self.ventana.geometry("960x680")
+        self.ventana.minsize(800, 600)
 
+        # Estilos
+        style = ttk.Style()
+        style.configure("Header.TLabel", font=("Arial", 12, "bold"))
+        style.configure("Title.TLabel", font=("Arial", 14, "bold"))
+        style.configure("Section.TLabelframe.Label", font=("Arial", 10, "bold"))
+
+        # Notebook (pestanas)
         notebook = ttk.Notebook(self.ventana)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
+        self.tab_venta = ttk.Frame(notebook)
         self.tab_datos = ttk.Frame(notebook)
-        self.tab_ventas = ttk.Frame(notebook)
         self.tab_reportes = ttk.Frame(notebook)
 
-        notebook.add(self.tab_ventas, text="Nueva Venta")
-        notebook.add(self.tab_datos, text="Agregar datos")
-        notebook.add(self.tab_reportes, text="Resumen")
+        notebook.add(self.tab_venta, text="  Nueva Venta  ")
+        notebook.add(self.tab_datos, text="  Agregar Datos  ")
+        notebook.add(self.tab_reportes, text="  Reportes  ")
 
-        self._armar_tab_ventas()
+        self._armar_tab_venta()
         self._armar_tab_datos()
         self._armar_tab_reportes()
 
-    
+    # ---- Pestaña de ventas ----
+    def _armar_tab_venta(self):
+        frame = self.tab_venta
+
+        ttk.Label(frame, text="Registrar Nueva Venta", style="Title.TLabel").grid(
+            row=0, column=0, columnspan=2, pady=(20, 15), padx=20)
+
+        ttk.Label(frame, text="Pote:").grid(row=1, column=0, sticky="e", padx=20, pady=10)
+        self.combo_venta_pote = ttk.Combobox(frame, state="readonly", width=38)
+        self.combo_venta_pote.grid(row=1, column=1, padx=20, pady=10)
+
+        ttk.Label(frame, text="Recipiente:").grid(row=2, column=0, sticky="e", padx=20, pady=10)
+        self.combo_venta_recipiente = ttk.Combobox(frame, state="readonly", width=38)
+        self.combo_venta_recipiente.grid(row=2, column=1, padx=20, pady=10)
+
+        btn_frame = ttk.Frame(frame)
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=15)
+
+        tk.Button(
+            btn_frame, text="Registrar venta", command=self.registrar_venta,
+            width=22, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"),
+            relief="raised", padx=8, pady=5, cursor="hand2"
+        ).pack(side="left", padx=10)
+
+        tk.Button(
+            btn_frame, text="Actualizar listas", command=self.refrescar_combos,
+            width=22, font=("Arial", 10), relief="raised", padx=8, pady=5, cursor="hand2"
+        ).pack(side="left", padx=10)
+
+        # Area de resultado
+        ttk.Label(frame, text="Ultima venta:", style="Header.TLabel").grid(
+            row=4, column=0, columnspan=2, sticky="w", padx=20, pady=(15, 5))
+
+        self.text_venta_resultado = tk.Text(
+            frame, height=8, width=65, wrap="word",
+            font=("Consolas", 10), bg="#f5f5f5", state="disabled", relief="sunken", bd=2
+        )
+        self.text_venta_resultado.grid(row=5, column=0, columnspan=2, padx=20, pady=5, sticky="nsew")
+
+        frame.grid_rowconfigure(5, weight=1)
+        frame.grid_columnconfigure(1, weight=1)
+
+    # ---- Pestaña de datos ----
     def _armar_tab_datos(self):
         frame = self.tab_datos
 
-        
-        tk.Label(frame, text="Nuevo sabor", font=("Arial", 10, "bold")).grid(
-            row=0, column=0, columnspan=2, sticky="w", padx=10, pady=(10, 0))
+        # Canvas con scroll para el formulario
+        canvas = tk.Canvas(frame)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scrollable = ttk.Frame(canvas)
 
-        tk.Label(frame, text="Nombre:").grid(row=1, column=0, sticky="e", padx=20, pady=20)
-        self.entry_sabor_nombre = tk.Entry(frame)
-        self.entry_sabor_nombre.grid(row=1, column=1, padx=5, pady=2)
+        scrollable.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable, anchor="nw", tags="inner")
+        canvas.configure(yscrollcommand=scrollbar.set)
 
-        tk.Label(frame, text="Elaboración:").grid(row=2, column=0, sticky="e", padx=20, pady=20)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig("inner", width=e.width))
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # --- Sabores ---
+        sabor_frame = ttk.LabelFrame(scrollable, text=" Nuevo Sabor ", style="Section.TLabelframe")
+        sabor_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=20, pady=(15, 5))
+
+        ttk.Label(sabor_frame, text="Nombre:").grid(row=0, column=0, sticky="e", padx=10, pady=5)
+        self.entry_sabor_nombre = ttk.Entry(sabor_frame, width=25)
+        self.entry_sabor_nombre.grid(row=0, column=1, padx=10, pady=5)
+
+        ttk.Label(sabor_frame, text="Elaboracion:").grid(row=1, column=0, sticky="e", padx=10, pady=5)
         self.combo_elaboracion = ttk.Combobox(
-            frame, values=["artesanal", "industrial"], state="readonly", width=17)
-        self.combo_elaboracion.grid(row=2, column=1, padx=5, pady=2)
+            sabor_frame, values=["artesanal", "industrial"], state="readonly", width=22
+        )
+        self.combo_elaboracion.grid(row=1, column=1, padx=10, pady=5)
 
-        tk.Label(frame, text="Precio por kilo:").grid(row=3, column=0, sticky="e", padx=20, pady=20)
-        self.entry_sabor_precio = tk.Entry(frame)
-        self.entry_sabor_precio.grid(row=3, column=1, padx=5, pady=2)
+        ttk.Label(sabor_frame, text="Precio por kilo:").grid(row=2, column=0, sticky="e", padx=10, pady=5)
+        self.entry_sabor_precio = ttk.Entry(sabor_frame, width=25)
+        self.entry_sabor_precio.grid(row=2, column=1, padx=10, pady=5)
 
-        tk.Button(frame, text="Agregar sabor", command=self.agregar_sabor).grid(
-            row=4, column=0, columnspan=2, pady=5)
+        tk.Button(
+            sabor_frame, text="Agregar Sabor", command=self.agregar_sabor,
+            bg="#2196F3", fg="white", font=("Arial", 10, "bold"),
+            width=18, relief="raised", padx=5, pady=3, cursor="hand2"
+        ).grid(row=3, column=0, columnspan=2, pady=8)
 
-        #Para Armar el cuadrito de pote
-        tk.Label(frame, text="Nuevo recipiente", font=("Arial", 10, "bold")).grid(
-            row=5, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 0))
+        # --- Recipientes ---
+        recip_frame = ttk.LabelFrame(scrollable, text=" Nuevo Recipiente ", style="Section.TLabelframe")
+        recip_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=20, pady=5)
 
-        tk.Label(frame, text="Nombre:").grid(row=6, column=0, sticky="e", padx=20, pady=20)
-        self.entry_recip_nombre = tk.Entry(frame)
-        self.entry_recip_nombre.grid(row=6, column=1, padx=5, pady=2)
+        ttk.Label(recip_frame, text="Nombre:").grid(row=0, column=0, sticky="e", padx=10, pady=5)
+        self.entry_recip_nombre = ttk.Entry(recip_frame, width=25)
+        self.entry_recip_nombre.grid(row=0, column=1, padx=10, pady=5)
 
-        tk.Label(frame, text="Kilos:").grid(row=7, column=0, sticky="e", padx=20, pady=20)
-        self.entry_recip_kilos = tk.Entry(frame)
-        self.entry_recip_kilos.grid(row=7, column=1, padx=5, pady=2)
+        ttk.Label(recip_frame, text="Kilos:").grid(row=1, column=0, sticky="e", padx=10, pady=5)
+        self.entry_recip_kilos = ttk.Entry(recip_frame, width=25)
+        self.entry_recip_kilos.grid(row=1, column=1, padx=10, pady=5)
 
-        tk.Label(frame, text="% incremento:").grid(row=8, column=0, sticky="e", padx=20, pady=20)
-        self.entry_recip_incremento = tk.Entry(frame)
-        self.entry_recip_incremento.grid(row=8, column=1, padx=5, pady=2)
+        ttk.Label(recip_frame, text="% incremento:").grid(row=2, column=0, sticky="e", padx=10, pady=5)
+        self.entry_recip_incremento = ttk.Entry(recip_frame, width=25)
+        self.entry_recip_incremento.grid(row=2, column=1, padx=10, pady=5)
 
-        tk.Button(frame, text="Agregar recipiente", command=self.agregar_recipiente).grid(
-            row=9, column=0, columnspan=2, pady=5)
+        tk.Button(
+            recip_frame, text="Agregar Recipiente", command=self.agregar_recipiente,
+            bg="#FF9800", fg="white", font=("Arial", 10, "bold"),
+            width=18, relief="raised", padx=5, pady=3, cursor="hand2"
+        ).grid(row=3, column=0, columnspan=2, pady=8)
 
-        #Para Armar el cuadrito de pote
-        tk.Label(frame, text="Nuevo pote", font=("Arial", 10, "bold")).grid(
-            row=10, column=0, columnspan=2, sticky="w", padx=10, pady=(15, 0))
+        # --- Potes ---
+        pote_frame = ttk.LabelFrame(scrollable, text=" Nuevo Pote ", style="Section.TLabelframe")
+        pote_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=20, pady=(5, 15))
 
-        tk.Label(frame, text="Sabor:").grid(row=11, column=0, sticky="e", padx=5)
-        self.combo_pote_sabor = ttk.Combobox(frame, state="readonly", width=25)
-        self.combo_pote_sabor.grid(row=11, column=1, padx=5, pady=2)
+        ttk.Label(pote_frame, text="Sabor:").grid(row=0, column=0, sticky="e", padx=10, pady=5)
+        self.combo_pote_sabor = ttk.Combobox(pote_frame, state="readonly", width=28)
+        self.combo_pote_sabor.grid(row=0, column=1, padx=10, pady=5)
 
-        tk.Label(frame, text="Fecha (AAAA-MM-DD):").grid(row=12, column=0, sticky="e", padx=5)
-        self.entry_pote_fecha = tk.Entry(frame)
-        self.entry_pote_fecha.grid(row=12, column=1, padx=5, pady=2)
+        ttk.Label(pote_frame, text="Fecha (AAAA-MM-DD):").grid(row=1, column=0, sticky="e", padx=10, pady=5)
+        self.entry_pote_fecha = ttk.Entry(pote_frame, width=25)
+        self.entry_pote_fecha.grid(row=1, column=1, padx=10, pady=5)
 
-        tk.Button(frame, text="Agregar pote", command=self.agregar_pote).grid(
-            row=13, column=0, columnspan=2, pady=5)
+        tk.Button(
+            pote_frame, text="Agregar Pote", command=self.agregar_pote,
+            bg="#9C27B0", fg="white", font=("Arial", 10, "bold"),
+            width=18, relief="raised", padx=5, pady=3, cursor="hand2"
+        ).grid(row=2, column=0, columnspan=2, pady=8)
 
-    #Pestaña registro de venta
-    def _armar_tab_ventas(self):
-        frame = self.tab_ventas
-
-        tk.Label(frame, text="Pote:").grid(row=0, column=0, sticky="e", padx=20, pady=20)
-        self.combo_venta_pote = ttk.Combobox(frame, state="readonly", width=30)
-        self.combo_venta_pote.grid(row=0, column=1, padx=20, pady=20)
-
-        tk.Label(frame, text="Recipiente:").grid(row=1, column=0, sticky="e", padx=20)
-        self.combo_venta_recipiente = ttk.Combobox(frame, state="readonly", width=30)
-        self.combo_venta_recipiente.grid(row=1, column=1, padx=5)
-
-        tk.Button(frame, text="Registrar venta", command=self.registrar_venta).grid(
-            row=2, column=0, columnspan=2, pady=15)
-
-        tk.Button(frame, text="Actualizar listas", command=self.refrescar_combos).grid(
-            row=3, column=0, columnspan=2)
-
-    #Reportes
+    # ---- Pestaña de reportes ----
     def _armar_tab_reportes(self):
         frame = self.tab_reportes
-        botones = [
-            ("Recaudación total", self.mostrar_recaudacion_total),
-            ("Pote más servido", self.mostrar_pote_mas_servido),
-            ("Pote menos servido", self.mostrar_pote_menos_servido),
-            ("Pote más recaudado", self.mostrar_pote_mas_recaudado),
-            ("Sabor más vendido", self.mostrar_sabor_mas_vendido),
-            ("Sabor con más ganancia", self.mostrar_sabor_mas_recaudado),
-            ("Sabor con más kilos vendidos", self.mostrar_sabor_mas_kilos_vendidos),
-            ("Sabor con menos kilos vendidos", self.mostrar_sabor_menos_kilos_vendidos),
-            ("Recipiente más solicitado", self.mostrar_recipiente_mas_solicitado),
-            ("% de venta por sabor", self.mostrar_porcentaje_venta_por_sabor),
-            ("% de recaudación por sabor", self.mostrar_porcentaje_recaudacion_por_sabor),
-            ("% de venta por pote", self.mostrar_porcentaje_venta_por_pote),
-            ("% de recaudación por pote", self.mostrar_porcentaje_recaudacion_por_pote),
-        ]
-        for i, (texto, comando) in enumerate(botones):
-            tk.Button(frame, text=texto, command=comando, width=32).grid(
-                row=i, column=0, padx=10, pady=2)
 
-    #Acciones para agregar
+        # Panel izquierdo - botones
+        left = ttk.Frame(frame, width=360)
+        left.pack(side="left", fill="y", padx=(10, 5), pady=10)
+        left.pack_propagate(False)
+
+        ttk.Label(left, text="Reportes", style="Title.TLabel").pack(pady=(0, 10))
+
+        botones = [
+            ("Recaudacion total", self.mostrar_recaudacion_total, "#4CAF50"),
+            ("Pote mas servido", self.mostrar_pote_mas_servido, "#2196F3"),
+            ("Pote menos servido", self.mostrar_pote_menos_servido, "#FF9800"),
+            ("Pote mas recaudado", self.mostrar_pote_mas_recaudado, "#4CAF50"),
+            ("Sabor mas vendido", self.mostrar_sabor_mas_vendido, "#9C27B0"),
+            ("Sabor con mas ganancia", self.mostrar_sabor_mas_recaudado, "#4CAF50"),
+            ("Sabor con mas kilos vendidos", self.mostrar_sabor_mas_kilos_vendidos, "#2196F3"),
+            ("Sabor con menos kilos vendidos", self.mostrar_sabor_menos_kilos_vendidos, "#FF9800"),
+            ("Recipiente mas solicitado", self.mostrar_recipiente_mas_solicitado, "#9C27B0"),
+            ("% de venta por sabor", self.mostrar_porcentaje_venta_por_sabor, "#607D8B"),
+            ("% de recaudacion por sabor", self.mostrar_porcentaje_recaudacion_por_sabor, "#607D8B"),
+            ("% de venta por pote", self.mostrar_porcentaje_venta_por_pote, "#607D8B"),
+            ("% de recaudacion por pote", self.mostrar_porcentaje_recaudacion_por_pote, "#607D8B"),
+        ]
+
+        for texto, cmd, color in botones:
+            tk.Button(
+                left, text=texto, command=cmd, width=32,
+                bg=color, fg="white", font=("Arial", 9, "bold"),
+                relief="raised", padx=5, pady=4, cursor="hand2"
+            ).pack(pady=2, fill="x")
+
+        # Panel derecho - resultados
+        right = ttk.Frame(frame)
+        right.pack(side="right", fill="both", expand=True, padx=(5, 10), pady=10)
+
+        ttk.Label(right, text="Resultados:", style="Header.TLabel").pack(anchor="w", pady=(0, 5))
+
+        self.text_resultados = tk.Text(
+            right, wrap="word", font=("Consolas", 10),
+            bg="#f5f5f5", relief="sunken", bd=2
+        )
+        scroll_res = ttk.Scrollbar(right, command=self.text_resultados.yview)
+        self.text_resultados.configure(yscrollcommand=scroll_res.set)
+
+        scroll_res.pack(side="right", fill="y")
+        self.text_resultados.pack(fill="both", expand=True)
+
+        tk.Button(
+            right, text="Limpiar", width=12, font=("Arial", 9),
+            command=lambda: self.text_resultados.delete("1.0", tk.END)
+        ).pack(pady=(5, 0))
+
+    # ---- Utilidades ----
+    def mostrar_resultado(self, titulo, texto):
+        self.text_resultados.delete("1.0", tk.END)
+        self.text_resultados.insert(
+            tk.END, f"{'=' * 50}\n  {titulo}\n{'=' * 50}\n\n{texto}"
+        )
+
+    def mostrar_resultado_venta(self, texto):
+        self.text_venta_resultado.configure(state="normal")
+        self.text_venta_resultado.delete("1.0", tk.END)
+        self.text_venta_resultado.insert(tk.END, texto)
+        self.text_venta_resultado.configure(state="disabled")
+
+    def refrescar_combos(self):
+        sabores = [str(s) for s in self.heladeria.sabores]
+        potes = [str(p) for p in self.heladeria.potes]
+        recipientes = [str(r) for r in self.heladeria.recipientes]
+
+        self.combo_pote_sabor["values"] = sabores
+        self.combo_venta_pote["values"] = potes
+        self.combo_venta_recipiente["values"] = recipientes
+
+        # Seleccionar el primer elemento si no hay seleccion
+        if sabores and self.combo_pote_sabor.current() < 0:
+            self.combo_pote_sabor.current(0)
+        if potes and self.combo_venta_pote.current() < 0:
+            self.combo_venta_pote.current(0)
+        if recipientes and self.combo_venta_recipiente.current() < 0:
+            self.combo_venta_recipiente.current(0)
+
+        # Forzar actualizacion visual de los comboboxes
+        self.ventana.update_idletasks()
+
+    # ---- Acciones de carga ----
     def agregar_sabor(self):
         try:
             nombre = self.entry_sabor_nombre.get().strip()
@@ -329,9 +448,13 @@ class HeladeriaGUI:
             messagebox.showinfo("Sabor agregado", str(sabor))
             self.entry_sabor_nombre.delete(0, tk.END)
             self.entry_sabor_precio.delete(0, tk.END)
+            self.combo_elaboracion.set("")
             self.refrescar_combos()
         except ValueError:
-            messagebox.showerror("Error", "Verificá los datos del sabor (precio numérico, campos completos).")
+            messagebox.showerror(
+                "Error",
+                "Verifica los datos del sabor (precio numerico, campos completos)."
+            )
 
     def agregar_recipiente(self):
         try:
@@ -349,16 +472,19 @@ class HeladeriaGUI:
             self.entry_recip_incremento.delete(0, tk.END)
             self.refrescar_combos()
         except ValueError:
-            messagebox.showerror("Error", "Verificá los datos del recipiente (kilos y % numéricos, nombre completo).")
+            messagebox.showerror(
+                "Error",
+                "Verifica los datos del recipiente (kilos y % numericos, nombre completo)."
+            )
 
     def agregar_pote(self):
         idx = self.combo_pote_sabor.current()
         if idx < 0:
-            messagebox.showerror("Error", "Elegí un sabor para el pote.")
+            messagebox.showerror("Error", "Elegi un sabor para el pote.")
             return
         fecha = self.entry_pote_fecha.get().strip()
         if not fecha:
-            messagebox.showerror("Error", "Ingresá la fecha de incorporación.")
+            messagebox.showerror("Error", "Ingresa la fecha de incorporacion.")
             return
         sabor = self.heladeria.sabores[idx]
         nuevo_id = len(self.heladeria.potes) + 1
@@ -368,80 +494,75 @@ class HeladeriaGUI:
         self.entry_pote_fecha.delete(0, tk.END)
         self.refrescar_combos()
 
-    #Venta
-    def refrescar_combos(self):
-        self.combo_pote_sabor["values"] = [str(s) for s in self.heladeria.sabores]
-        self.combo_venta_pote["values"] = [str(p) for p in self.heladeria.potes]
-        self.combo_venta_recipiente["values"] = [str(r) for r in self.heladeria.recipientes]
-
+    # ---- Venta ----
     def registrar_venta(self):
         idx_pote = self.combo_venta_pote.current()
         idx_recip = self.combo_venta_recipiente.current()
         if idx_pote < 0 or idx_recip < 0:
-            messagebox.showerror("Error", "Elegí un pote y un recipiente.")
+            messagebox.showerror("Error", "Elegi un pote y un recipiente.")
             return
         pote = self.heladeria.potes[idx_pote]
         recipiente = self.heladeria.recipientes[idx_recip]
         venta = self.heladeria.vender(pote, recipiente)
-        messagebox.showinfo("Venta registrada", str(venta))
+        self.mostrar_resultado_venta(str(venta))
         self.refrescar_combos()
 
-    #Muestra de reportes
+    # ---- Reportes ----
     def mostrar_recaudacion_total(self):
         total = self.heladeria.recaudacion_total()
-        messagebox.showinfo("Recaudación total", f"${total:.2f}")
+        self.mostrar_resultado("Recaudacion Total", f"${total:.2f}")
 
     def mostrar_pote_mas_servido(self):
         pote = self.heladeria.pote_mas_servido()
-        messagebox.showinfo("Pote más servido", f"{pote}")
+        self.mostrar_resultado("Pote mas servido", str(pote) if pote else "Sin datos")
 
     def mostrar_pote_menos_servido(self):
         pote = self.heladeria.pote_menos_servido()
-        messagebox.showinfo("Pote menos servido", f"{pote}")
+        self.mostrar_resultado("Pote menos servido", str(pote) if pote else "Sin datos")
 
     def mostrar_pote_mas_recaudado(self):
         pote = self.heladeria.pote_mas_recaudado()
-        messagebox.showinfo("Pote más recaudado", f"{pote}")
+        self.mostrar_resultado("Pote mas recaudado", str(pote) if pote else "Sin datos")
 
     def mostrar_sabor_mas_vendido(self):
         sabor = self.heladeria.sabor_mas_vendido()
-        messagebox.showinfo("Sabor más vendido", f"{sabor}")
+        self.mostrar_resultado("Sabor mas vendido", str(sabor) if sabor else "Sin datos")
 
     def mostrar_sabor_mas_recaudado(self):
         sabor = self.heladeria.sabor_mas_recaudado()
-        messagebox.showinfo("Sabor con más ganancia", f"{sabor}")
+        self.mostrar_resultado("Sabor con mas ganancia", str(sabor) if sabor else "Sin datos")
 
     def mostrar_sabor_mas_kilos_vendidos(self):
         sabor = self.heladeria.sabor_mas_kilos_vendidos()
-        messagebox.showinfo("Sabor con más kilos vendidos", f"{sabor}")
+        self.mostrar_resultado("Sabor con mas kilos vendidos", str(sabor) if sabor else "Sin datos")
 
     def mostrar_sabor_menos_kilos_vendidos(self):
         sabor = self.heladeria.sabor_menos_kilos_vendidos()
-        messagebox.showinfo("Sabor con menos kilos vendidos", f"{sabor}")
+        self.mostrar_resultado("Sabor con menos kilos vendidos", str(sabor) if sabor else "Sin datos")
 
     def mostrar_recipiente_mas_solicitado(self):
-        recipiente = self.heladeria.recipiente_mas_solicitado()
-        messagebox.showinfo("Recipiente más solicitado", f"{recipiente}")
+        recip = self.heladeria.recipiente_mas_solicitado()
+        self.mostrar_resultado("Recipiente mas solicitado", str(recip) if recip else "Sin datos")
 
     def mostrar_porcentaje_venta_por_sabor(self):
         datos = self.heladeria.porcentaje_venta_por_sabor()
-        texto = "\n".join(f"{s}: {p:.1f}%" for s, p in datos.items())
-        messagebox.showinfo("% de venta por sabor", texto or "Sin ventas registradas")
+        texto = "\n".join(f"  {s}: {p:.1f}%" for s, p in datos.items())
+        self.mostrar_resultado("% de venta por sabor", texto or "Sin ventas registradas")
 
     def mostrar_porcentaje_recaudacion_por_sabor(self):
         datos = self.heladeria.porcentaje_recaudacion_por_sabor()
-        texto = "\n".join(f"{s}: {p:.1f}%" for s, p in datos.items())
-        messagebox.showinfo("% de recaudación por sabor", texto or "Sin ventas registradas")
+        texto = "\n".join(f"  {s}: {p:.1f}%" for s, p in datos.items())
+        self.mostrar_resultado("% de recaudacion por sabor", texto or "Sin ventas registradas")
 
     def mostrar_porcentaje_venta_por_pote(self):
         datos = self.heladeria.porcentaje_venta_por_pote()
-        texto = "\n".join(f"Pote {id_pote}: {p:.1f}%" for id_pote, p in datos.items())
-        messagebox.showinfo("% de venta por pote", texto or "Sin ventas registradas")
+        texto = "\n".join(f"  Pote {id_p}: {p:.1f}%" for id_p, p in datos.items())
+        self.mostrar_resultado("% de venta por pote", texto or "Sin ventas registradas")
 
     def mostrar_porcentaje_recaudacion_por_pote(self):
         datos = self.heladeria.porcentaje_recaudacion_por_pote()
-        texto = "\n".join(f"Pote {id_pote}: {p:.1f}%" for id_pote, p in datos.items())
-        messagebox.showinfo("% de recaudación por pote", texto or "Sin ventas registradas")
+        texto = "\n".join(f"  Pote {id_p}: {p:.1f}%" for id_p, p in datos.items())
+        self.mostrar_resultado("% de recaudacion por pote", texto or "Sin ventas registradas")
 
     def iniciar(self):
         self.refrescar_combos()
