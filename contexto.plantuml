@@ -1,0 +1,11 @@
+@startuml
+left to right direction
+actor "Responsable del local" as R
+rectangle "Sistema de gestión de la heladería\n(Python + Tkinter)" as S
+database "Archivos JSON\n(sabores, stock, ventas, config)" as J
+
+R --> S : altas de sabores, reposiciones,\nventas, consultas de estadísticas
+S --> R : precios, alertas de reposición,\nestadísticas
+S --> J : guarda al cerrar
+J --> S : carga al iniciar
+@enduml

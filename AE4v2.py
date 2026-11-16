@@ -1,68 +1,14 @@
 from collections import defaultdict
 from datetime import datetime
+import json
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk
+from modelos.sabor import Sabor
+from modelos.recipiente import Recipiente, PresentacionPorPorcion
+from modelos.venta import Venta
+from modelos.pote import Pote
 
-
-class Sabor:
-    def __init__(self, id, nombre, elaboracion, precio_por_kilo):
-        self.id = id
-        self.nombre = nombre
-        self.elaboracion = elaboracion  
-        self.precio_por_kilo = precio_por_kilo
-
-    def __str__(self):
-        return f"{self.nombre} (${self.precio_por_kilo}/kg, {self.elaboracion})"
-
-
-class Recipiente:
-    def __init__(self, id, nombre, kilos, porcentaje_incremento):
-        self.id = id
-        self.nombre = nombre                               
-        self.kilos = kilos                                
-        self.porcentaje_incremento = porcentaje_incremento  
-
-    def __str__(self):
-        return f"{self.nombre} ({self.kilos} kg)"
-
-
-class Pote:
-    def __init__(self, id, sabor, fecha_incorporacion):
-        self.id = id
-        self.sabor = sabor
-        self.fecha_incorporacion = fecha_incorporacion
-        self.kilos_servidos = 0
-        self.dinero_recaudado = 0
-
-    def registrar_venta(self, kilos, dinero):
-        self.kilos_servidos += kilos
-        self.dinero_recaudado += dinero
-
-    def __str__(self):
-        return (f"Pote #{self.id} de {self.sabor.nombre} - "
-                f"Servidos: {self.kilos_servidos:.2f} kg, Recaudado: ${self.dinero_recaudado:.2f}")
-
-
-class Venta:
-    def __init__(self, pote, recipiente):
-        self.pote = pote
-        self.recipiente = recipiente
-        self.kilos = recipiente.kilos
-        # El precio se calcula y se guarda en el momento de la venta,
-        # asi no cambia si despues se modifica el precio del sabor.
-        precio_base = pote.sabor.precio_por_kilo * self.kilos
-        incremento = precio_base * (recipiente.porcentaje_incremento / 100)
-        self.precio_total = precio_base + incremento
-
-    def calcular_precio_total(self):
-        return self.precio_total
-
-    def calcular_kilos(self):
-        return self.kilos
-
-    def __str__(self):
-        return (f"Venta de {self.kilos} kg de {self.pote.sabor.nombre} "
-                f"en {self.recipiente.nombre}: ${self.calcular_precio_total():.2f}")
 
 #Logica de la heladeria
 class Heladeria:
@@ -82,9 +28,10 @@ class Heladeria:
     def agregar_recipiente(self, recipiente):
         self.recipientes.append(recipiente)
 
-    def vender(self, pote, recipiente):
-        venta = Venta(pote, recipiente)
-        pote.registrar_venta(venta.calcular_kilos(), venta.calcular_precio_total())
+    def vender(self, potes, recipiente):
+        venta = Venta(potes, recipiente)
+        for pote, kilos_aporte, dinero_aporte in venta.aportes:
+            pote.registrar_venta(kilos_aporte, dinero_aporte)
         self.ventas.append(venta)
         return venta
 
@@ -93,19 +40,23 @@ class Heladeria:
     def kilos_por_sabor(self):
         resultado = defaultdict(float)
         for venta in self.ventas:
-            resultado[venta.pote.sabor.nombre] += venta.calcular_kilos()
+            for pote, kilos_aporte, _ in venta.aportes:
+                resultado[pote.sabor.nombre] += kilos_aporte
         return resultado
 
     def recaudacion_por_sabor(self):
         resultado = defaultdict(float)
         for venta in self.ventas:
-            resultado[venta.pote.sabor.nombre] += venta.calcular_precio_total()
+            for pote, _, dinero_aporte in venta.aportes:
+                resultado[pote.sabor.nombre] += dinero_aporte
         return resultado
 
     def cantidad_ventas_por_sabor(self):
-        resultado = defaultdict(int)
+        resultado = defaultdict(float)
         for venta in self.ventas:
-            resultado[venta.pote.sabor.nombre] += 1
+            parte = 1.0 / len(venta.potes)
+            for pote in venta.potes:
+                resultado[pote.sabor.nombre] += parte
         return resultado
 
     #Punto 1
@@ -134,28 +85,28 @@ class Heladeria:
         resultado = self.cantidad_ventas_por_sabor()
         if not resultado:
             return None
-        return max(resultado, key=resultado.get)
+        return max(resultado, key=lambda s: resultado[s])
 
     #Punto 5
     def sabor_mas_recaudado(self):
         resultado = self.recaudacion_por_sabor()
         if not resultado:
             return None
-        return max(resultado, key=resultado.get)
+        return max(resultado, key=lambda s: resultado[s])
 
     #Punto 6
     def sabor_mas_kilos_vendidos(self):
         resultado = self.kilos_por_sabor()
         if not resultado:
             return None
-        return max(resultado, key=resultado.get)
+        return max(resultado, key=lambda s: resultado[s])
 
     #Punto 7
     def sabor_menos_kilos_vendidos(self):
         resultado = self.kilos_por_sabor()
         if not resultado:
             return None
-        return min(resultado, key=resultado.get)
+        return min(resultado, key=lambda s: resultado[s])
 
     #Punto 8 
     def recipiente_mas_solicitado(self):
@@ -164,7 +115,7 @@ class Heladeria:
         resultado = defaultdict(int)
         for venta in self.ventas:
             resultado[venta.recipiente.nombre] += 1
-        return max(resultado, key=resultado.get)
+        return max(resultado, key=lambda r: resultado[r])
 
     #Punto 9 
     def porcentaje_venta_por_sabor(self):
@@ -391,15 +342,21 @@ class HeladeriaGUI:
         frame.columnconfigure(1, weight=3, uniform="v")
         frame.rowconfigure(0, weight=1)
 
-        tarjeta, cuerpo = self._tarjeta(frame, "Registrar venta", "Elegí el pote y el recipiente")
+        tarjeta, cuerpo = self._tarjeta(frame, "Registrar venta", "Elegí los sabores y el tamaño de pote")
         tarjeta.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-        self.combo_venta_pote = self._campo(
-            cuerpo, "Pote", ttk.Combobox(cuerpo, state="readonly"))
-        self.combo_venta_recipiente = self._campo(
-            cuerpo, "Recipiente", ttk.Combobox(cuerpo, state="readonly"))
-        for combo in (self.combo_venta_pote, self.combo_venta_recipiente):
+        ttk.Label(cuerpo, text="Sabores", style="Panel.TLabel").pack(anchor="w")
+        self.combos_venta_sabores = []
+        for i in range(4):
+            combo = ttk.Combobox(cuerpo, state="readonly")
+            combo.pack(fill="x", pady=(2, 6 if i < 3 else 10))
             combo.bind("<<ComboboxSelected>>", lambda e: self._actualizar_vista_previa())
+            self.combos_venta_sabores.append(combo)
+        self.combo_venta_pote = self.combos_venta_sabores[0]
+
+        self.combo_venta_recipiente = self._campo(
+            cuerpo, "Tamaño de pote", ttk.Combobox(cuerpo, state="readonly"))
+        self.combo_venta_recipiente.bind("<<ComboboxSelected>>", lambda e: self._al_cambiar_recipiente())
 
         # Vista previa del precio antes de confirmar
         previa = ttk.Frame(cuerpo, style="Panel.TFrame")
@@ -417,27 +374,51 @@ class HeladeriaGUI:
         tarjeta.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         self.tabla_ventas = self._tabla(cuerpo, [
             ("n", "#", 40, "center"),
-            ("sabor", "Sabor", 150, "w"),
-            ("recipiente", "Recipiente", 100, "w"),
+            ("sabor", "Sabores", 180, "w"),
+            ("recipiente", "Tamaño de pote", 110, "w"),
             ("kilos", "Kilos", 60, "e"),
             ("total", "Total", 100, "e"),
         ])
 
-    def _actualizar_vista_previa(self):
-        idx_pote = self.combo_venta_pote.current()
+    def _al_cambiar_recipiente(self):
         idx_recip = self.combo_venta_recipiente.current()
-        if idx_pote < 0 or idx_recip < 0:
+        if idx_recip >= 0:
+            max_sab = self.heladeria.recipientes[idx_recip].max_sabores
+            for i, combo in enumerate(self.combos_venta_sabores):
+                if i < max_sab:
+                    combo.configure(state="readonly")
+                else:
+                    if combo["values"]:
+                        combo.current(0)
+                    combo.configure(state="disabled")
+        self._actualizar_vista_previa()
+
+    def _obtener_potes_seleccionados(self):
+        idx_recip = self.combo_venta_recipiente.current()
+        max_sab = self.heladeria.recipientes[idx_recip].max_sabores if idx_recip >= 0 else 4
+        potes = []
+        for i, combo in enumerate(self.combos_venta_sabores[:max_sab]):
+            idx = combo.current()
+            if i == 0:
+                if idx >= 0:
+                    potes.append(self.heladeria.potes[idx])
+            else:
+                if idx > 0:
+                    potes.append(self.heladeria.potes[idx - 1])
+        return potes
+
+    def _actualizar_vista_previa(self):
+        potes = self._obtener_potes_seleccionados()
+        idx_recip = self.combo_venta_recipiente.current()
+        if not potes or idx_recip < 0:
             self.lbl_precio_previo.config(text="$0,00")
-            self.lbl_detalle_previo.config(text="Elegí un pote y un recipiente.")
+            self.lbl_detalle_previo.config(text="Elegí los sabores y el tamaño de pote.")
             return
-        pote = self.heladeria.potes[idx_pote]
         recipiente = self.heladeria.recipientes[idx_recip]
         # Crear una Venta no la registra: solo calcula el precio
-        precio = Venta(pote, recipiente).calcular_precio_total()
+        precio = Venta(potes, recipiente).calcular_precio_total()
         self.lbl_precio_previo.config(text=formato_dinero(precio))
-        self.lbl_detalle_previo.config(
-            text=f"{recipiente.kilos} kg × {formato_dinero(pote.sabor.precio_por_kilo)}/kg "
-                 f"+ {recipiente.porcentaje_incremento:g}% por recipiente")
+        self.lbl_detalle_previo.config(text=recipiente.detalle_precio(potes))
 
     # ---------- Pestaña: Catálogo ----------
     def _armar_tab_datos(self):
@@ -612,6 +593,9 @@ class HeladeriaGUI:
             return
         sabor = Sabor(len(self.heladeria.sabores) + 1, nombre, elaboracion, precio)
         self.heladeria.agregar_sabor(sabor)
+        self.heladeria.agregar_pote(
+            Pote(len(self.heladeria.potes) + 1, sabor, datetime.now().strftime("%Y-%m-%d"))
+        )
         self.entry_sabor_nombre.delete(0, tk.END)
         self.entry_sabor_precio.delete(0, tk.END)
         self.combo_elaboracion.set("")
@@ -659,38 +643,49 @@ class HeladeriaGUI:
 
     # ---------- Venta ----------
     def registrar_venta(self):
-        idx_pote = self.combo_venta_pote.current()
+        potes = self._obtener_potes_seleccionados()
         idx_recip = self.combo_venta_recipiente.current()
-        if idx_pote < 0 or idx_recip < 0:
-            self._avisar("Elegí un pote y un recipiente.", error=True)
+        if not potes or idx_recip < 0:
+            self._avisar("Elegí los sabores y el tamaño de pote.", error=True)
             return
-        pote = self.heladeria.potes[idx_pote]
         recipiente = self.heladeria.recipientes[idx_recip]
-        venta = self.heladeria.vender(pote, recipiente)
+        try:
+            venta = self.heladeria.vender(potes, recipiente)
+        except ValueError as err:
+            self._avisar(str(err), error=True)
+            return
         self.refrescar()
-        self._avisar(f"Venta registrada: {venta.kilos} kg de {pote.sabor.nombre} en "
+        self._avisar(f"Venta registrada: {venta.kilos:g} kg ({venta.nombres_sabores()}) en "
                      f"{recipiente.nombre} por {formato_dinero(venta.calcular_precio_total())}")
 
     # ---------- Actualizacion general de la pantalla ----------
     def refrescar(self):
         h = self.heladeria
+        opciones_sabores = [
+            f"{p.sabor.nombre} · {p.sabor.elaboracion} · {formato_dinero(p.sabor.precio_por_kilo)}/kg"
+            for p in h.potes
+        ]
         # Combos (se conserva lo que estaba elegido)
         combos = [
             (self.combo_pote_sabor, [f"{s.nombre} · {s.elaboracion} · "
                                      f"{formato_dinero(s.precio_por_kilo)}/kg" for s in h.sabores]),
-            (self.combo_venta_pote, [f"Pote #{p.id} · {p.sabor.nombre}" for p in h.potes]),
-            (self.combo_venta_recipiente, [f"{r.nombre} · {r.kilos:g} kg (+{r.porcentaje_incremento:g}%)"
-                                           for r in h.recipientes]),
+            (self.combos_venta_sabores[0], opciones_sabores),
+            (self.combos_venta_sabores[1], ["(Sin 2° sabor)"] + opciones_sabores),
+            (self.combos_venta_sabores[2], ["(Sin 3° sabor)"] + opciones_sabores),
+            (self.combos_venta_sabores[3], ["(Sin 4° sabor)"] + opciones_sabores),
+            (self.combo_venta_recipiente, [r.etiqueta_combo() for r in h.recipientes]),
         ]
         for combo, valores in combos:
             seleccion = combo.current()
             combo["values"] = valores
             if 0 <= seleccion < len(valores):
                 combo.current(seleccion)
+            elif combo in self.combos_venta_sabores[1:] and valores:
+                combo.current(0)
 
         # Tablas
         self._llenar_tabla(self.tabla_ventas, [
-            (i, v.pote.sabor.nombre, v.recipiente.nombre, f"{v.kilos:g}",
+            (i, v.nombres_sabores(), v.recipiente.nombre, f"{v.kilos:g}",
              formato_dinero(v.calcular_precio_total()))
             for i, v in reversed(list(enumerate(h.ventas, start=1)))
         ])
@@ -791,37 +786,24 @@ class HeladeriaGUI:
 
 
 if __name__ == "__main__":
-    chocolate = Sabor(1, "Chocolate amargo", "artesanal", 9000)
-    vainilla = Sabor(2, "Vainilla", "industrial", 7000)
-    frutilla = Sabor(3, "Frutilla a la crema", "artesanal", 8500)
-
-    vasito = Recipiente(1, "Vasito", 0.25, 8)
-    copa = Recipiente(2, "Copa", 0.5, 8)
-    balde = Recipiente(3, "Balde", 1, 8)
-
     heladeria = Heladeria()
 
-    heladeria.agregar_sabor(chocolate)
-    heladeria.agregar_sabor(vainilla)
-    heladeria.agregar_sabor(frutilla)
+    ruta_json = Path(__file__).parent / "scripts" / "sabores_iniciales.json"
+    for item in json.loads(ruta_json.read_text(encoding="utf-8")):
+        sabor = Sabor(item["id"], item["nombre"], item["elaboracion"], item["precio"])
+        heladeria.agregar_sabor(sabor)
+        heladeria.agregar_pote(Pote(item["id"], sabor, item["fecha"]))
 
-    heladeria.agregar_recipiente(vasito)
-    heladeria.agregar_recipiente(copa)
-    heladeria.agregar_recipiente(balde)
-
-    pote1 = Pote(1, chocolate, "2026-08-01")
-    pote2 = Pote(2, vainilla, "2026-08-01")
-    pote3 = Pote(3, frutilla, "2026-08-15")
-
-    heladeria.agregar_pote(pote1)
-    heladeria.agregar_pote(pote2)
-    heladeria.agregar_pote(pote3)
-
-    heladeria.vender(pote1, vasito)
-    heladeria.vender(pote1, balde)
-    heladeria.vender(pote2, copa)
-    heladeria.vender(pote3, vasito)
-    heladeria.vender(pote3, copa)
+    # Tamaños de pote / presentaciones cargados desde JSON (polimorfismo en 2 clases, sin ifs)
+    clases_presentacion = {
+        "Recipiente": Recipiente,
+        "PresentacionPorPorcion": PresentacionPorPorcion,
+    }
+    ruta_tamanos = Path(__file__).parent / "scripts" / "tamanos_pote.json"
+    for item in json.loads(ruta_tamanos.read_text(encoding="utf-8")):
+        datos = dict(item)
+        cls = clases_presentacion[datos.pop("clase")]
+        heladeria.agregar_recipiente(cls(**datos))
 
     gui = HeladeriaGUI(heladeria)
     gui.iniciar()
