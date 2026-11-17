@@ -3,11 +3,98 @@ from datetime import datetime
 import json
 from pathlib import Path
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 from modelos.sabor import Sabor
 from modelos.recipiente import Recipiente, PresentacionPorPorcion
 from modelos.venta import Venta
 from modelos.pote import Pote
+
+
+RUTA_SCRIPTS = Path(__file__).parent / "scripts"
+RUTA_SABORES = RUTA_SCRIPTS / "sabores_iniciales.json"
+RUTA_TAMANOS = RUTA_SCRIPTS / "tamanos_pote.json"
+RUTA_VENTAS = RUTA_SCRIPTS / "ventas.json"
+
+CLASES_PRESENTACION = {
+    "Recipiente": Recipiente,
+    "PresentacionPorPorcion": PresentacionPorPorcion,
+}
+
+
+def guardar_json(heladeria):
+    sabores_data = [
+        {
+            "id": p.id,
+            "nombre": p.sabor.nombre,
+            "elaboracion": p.sabor.elaboracion,
+            "precio": p.sabor.precio_por_kilo,
+            "fecha": p.fecha_incorporacion,
+            "stock_kg": round(p.stock_kg, 4),
+        }
+        for p in heladeria.potes
+    ]
+    RUTA_SABORES.write_text(
+        json.dumps(sabores_data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    tamanos_data = []
+    for r in heladeria.recipientes:
+        item = {
+            "id": r.id,
+            "clase": type(r).__name__,
+            "nombre": r.nombre,
+            "kilos": r.kilos,
+            "max_sabores": r.max_sabores,
+        }
+        if isinstance(r, PresentacionPorPorcion):
+            item["precio_fijo"] = r.precio_fijo
+        else:
+            item["porcentaje_incremento"] = r.porcentaje_incremento
+        tamanos_data.append(item)
+    RUTA_TAMANOS.write_text(
+        json.dumps(tamanos_data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    ventas_data = [
+        {
+            "potes_ids": [p.id for p in v.potes],
+            "recipiente_id": v.recipiente.id,
+        }
+        for v in heladeria.ventas
+    ]
+    RUTA_VENTAS.write_text(
+        json.dumps(ventas_data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def cargar_json(heladeria):
+    for item in json.loads(RUTA_SABORES.read_text(encoding="utf-8")):
+        sabor = Sabor(item["id"], item["nombre"], item["elaboracion"], item["precio"])
+        heladeria.agregar_sabor(sabor)
+        heladeria.agregar_pote(
+            Pote(item["id"], sabor, item["fecha"], stock_kg=item.get("stock_kg", 5.0))
+        )
+
+    for item in json.loads(RUTA_TAMANOS.read_text(encoding="utf-8")):
+        datos = dict(item)
+        cls = CLASES_PRESENTACION[datos.pop("clase")]
+        heladeria.agregar_recipiente(cls(**datos))
+
+    if RUTA_VENTAS.exists():
+        potes_por_id = {p.id: p for p in heladeria.potes}
+        recips_por_id = {r.id: r for r in heladeria.recipientes}
+        for item in json.loads(RUTA_VENTAS.read_text(encoding="utf-8")):
+            potes_venta = [potes_por_id[pid] for pid in item["potes_ids"] if pid in potes_por_id]
+            recip = recips_por_id.get(item["recipiente_id"])
+            if potes_venta and recip:
+                venta = Venta(potes_venta, recip)
+                for pote, kilos_aporte, dinero_aporte in venta.aportes:
+                    pote.kilos_servidos += kilos_aporte
+                    pote.dinero_recaudado += dinero_aporte
+                heladeria.ventas.append(venta)
 
 
 #Logica de la heladeria
@@ -30,6 +117,22 @@ class Heladeria:
 
     def vender(self, potes, recipiente):
         venta = Venta(potes, recipiente)
+        consumo_por_pote = defaultdict(float)
+        for pote, kilos_aporte, _ in venta.aportes:
+            consumo_por_pote[pote] += kilos_aporte
+
+        faltantes = []
+        for pote, kilos_pedidos in consumo_por_pote.items():
+            if not pote.puede_servir(kilos_pedidos):
+                restante = pote.stock_kg - kilos_pedidos
+                faltantes.append(
+                    f"- {pote.sabor.nombre}: stock {pote.stock_kg:.2f} kg, "
+                    f"pedido {kilos_pedidos:.2f} kg (quedaría en {restante:.2f} kg; "
+                    f"mínimo obligatorio: {Pote.STOCK_MINIMO_KG:.2f} kg)"
+                )
+        if faltantes:
+            raise ValueError("Alerta de reposición de stock:\n" + "\n".join(faltantes))
+
         for pote, kilos_aporte, dinero_aporte in venta.aportes:
             pote.registrar_venta(kilos_aporte, dinero_aporte)
         self.ventas.append(venta)
@@ -177,8 +280,8 @@ class HeladeriaGUI:
         self.heladeria = heladeria
         self.ventana = tk.Tk()
         self.ventana.title("Heladería")
-        self.ventana.geometry("960x720")
-        self.ventana.minsize(880, 680)
+        self.ventana.geometry("1200x820")
+        self.ventana.minsize(1040, 720)
         self.ventana.configure(bg=COLORES["fondo"])
         self._aviso_pendiente = None
         self._boton_reporte_activo = None
@@ -211,41 +314,41 @@ class HeladeriaGUI:
         estilo = ttk.Style(self.ventana)
         estilo.theme_use("clam")  # el tema "clam" es el que mas deja personalizar
 
-        estilo.configure(".", background=c["fondo"], foreground=c["texto"], font=(FUENTE, 10))
+        estilo.configure(".", background=c["fondo"], foreground=c["texto"], font=(FUENTE, 11))
         estilo.configure("TFrame", background=c["fondo"])
         estilo.configure("Panel.TFrame", background=c["panel"])
         estilo.configure("TLabel", background=c["fondo"])
         estilo.configure("Panel.TLabel", background=c["panel"])
-        estilo.configure("Titulo.TLabel", background=c["panel"], font=(FUENTE, 12, "bold"))
+        estilo.configure("Titulo.TLabel", background=c["panel"], font=(FUENTE, 14, "bold"))
         estilo.configure("Suave.TLabel", background=c["panel"], foreground=c["texto_suave"])
         estilo.configure("Grande.TLabel", background=c["panel"], foreground=c["primario"],
-                         font=(FUENTE, 24, "bold"))
+                         font=(FUENTE, 28, "bold"))
 
         estilo.configure("TNotebook", background=c["fondo"], borderwidth=0, tabmargins=0)
-        estilo.configure("TNotebook.Tab", padding=(18, 8), font=(FUENTE, 10, "bold"),
+        estilo.configure("TNotebook.Tab", padding=(20, 10), font=(FUENTE, 11, "bold"),
                          background=c["borde"], foreground=c["texto_suave"], borderwidth=0)
         estilo.map("TNotebook.Tab",
                    background=[("selected", c["fondo"])],
                    foreground=[("selected", c["primario"])])
 
         estilo.configure("Accent.TButton", background=c["primario"], foreground="white",
-                         font=(FUENTE, 10, "bold"), padding=(16, 8), borderwidth=0)
+                         font=(FUENTE, 11, "bold"), padding=(18, 10), borderwidth=0)
         estilo.map("Accent.TButton", background=[("active", c["primario_hover"])])
 
         estilo.configure("Reporte.TButton", background=c["panel"], foreground=c["texto"],
-                         anchor="w", padding=(12, 4), borderwidth=0)
+                         font=(FUENTE, 11), anchor="w", padding=(12, 6), borderwidth=0)
         estilo.map("Reporte.TButton",
                    background=[("pressed", c["resaltado"]), ("active", c["borde"])])
         # Boton del reporte que se esta mostrando
         estilo.configure("ReporteActivo.TButton", background=c["resaltado"],
-                         foreground=c["primario_hover"], font=(FUENTE, 10, "bold"),
-                         anchor="w", padding=(12, 4), borderwidth=0)
+                         foreground=c["primario_hover"], font=(FUENTE, 11, "bold"),
+                         anchor="w", padding=(12, 6), borderwidth=0)
         estilo.map("ReporteActivo.TButton", background=[("active", c["resaltado"])])
 
         estilo.configure("Treeview", background=c["panel"], fieldbackground=c["panel"],
-                         rowheight=28, borderwidth=0)
+                         rowheight=32, borderwidth=0)
         estilo.configure("Treeview.Heading", background=c["borde"], foreground=c["texto"],
-                         font=(FUENTE, 9, "bold"), borderwidth=0, padding=(6, 4))
+                         font=(FUENTE, 10, "bold"), borderwidth=0, padding=(8, 6))
         estilo.map("Treeview", background=[("selected", c["resaltado"])],
                    foreground=[("selected", c["texto"])])
 
@@ -320,8 +423,9 @@ class HeladeriaGUI:
 
     def _armar_barra_estado(self):
         self.barra_estado = tk.Label(self.ventana, text="Listo.", anchor="w",
+                                     justify="left", wraplength=1140,
                                      bg=COLORES["fondo"], fg=COLORES["texto_suave"],
-                                     font=(FUENTE, 9), padx=20, pady=6)
+                                     font=(FUENTE, 10), padx=20, pady=8)
         self.barra_estado.pack(fill="x", side="bottom")
 
     def _avisar(self, texto, error=False):
@@ -364,7 +468,7 @@ class HeladeriaGUI:
         ttk.Label(previa, text="Total a cobrar", style="Suave.TLabel").pack(anchor="w")
         self.lbl_precio_previo = ttk.Label(previa, text="$0,00", style="Grande.TLabel")
         self.lbl_precio_previo.pack(anchor="w")
-        self.lbl_detalle_previo = ttk.Label(previa, text="", style="Suave.TLabel", wraplength=300)
+        self.lbl_detalle_previo = ttk.Label(previa, text="", style="Suave.TLabel", wraplength=420, justify="left")
         self.lbl_detalle_previo.pack(anchor="w")
 
         ttk.Button(cuerpo, text="Registrar venta", style="Accent.TButton",
@@ -373,11 +477,11 @@ class HeladeriaGUI:
         tarjeta, cuerpo = self._tarjeta(frame, "Historial de ventas", "La más reciente arriba")
         tarjeta.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         self.tabla_ventas = self._tabla(cuerpo, [
-            ("n", "#", 40, "center"),
-            ("sabor", "Sabores", 180, "w"),
-            ("recipiente", "Tamaño de pote", 110, "w"),
-            ("kilos", "Kilos", 60, "e"),
-            ("total", "Total", 100, "e"),
+            ("n", "#", 45, "center"),
+            ("sabor", "Sabores", 220, "w"),
+            ("recipiente", "Tamaño de pote", 150, "w"),
+            ("kilos", "Kilos", 75, "e"),
+            ("total", "Total", 115, "e"),
         ])
 
     def _al_cambiar_recipiente(self):
@@ -463,16 +567,30 @@ class HeladeriaGUI:
             entrada.bind("<Return>", lambda e: self.agregar_recipiente())
         self.entry_pote_fecha.bind("<Return>", lambda e: self.agregar_pote())
 
-        # Tabla de potes
+        # Tabla de potes y barra de reposición de stock
         tarjeta, cuerpo = self._tarjeta(frame, "Potes en el mostrador")
         tarjeta.grid(row=1, column=0, columnspan=3, sticky="nsew", pady=(12, 0))
+
+        barra_stock = ttk.Frame(cuerpo, style="Panel.TFrame")
+        barra_stock.pack(fill="x", pady=(0, 10))
+        ttk.Label(barra_stock, text="Reponer stock:", style="Panel.TLabel").pack(side="left", padx=(0, 8))
+        self.combo_reponer_pote = ttk.Combobox(barra_stock, state="readonly", width=32)
+        self.combo_reponer_pote.pack(side="left", padx=(0, 8))
+        ttk.Label(barra_stock, text="Kg:", style="Panel.TLabel").pack(side="left", padx=(0, 4))
+        self.entry_reponer_kilos = ttk.Entry(barra_stock, width=8)
+        self.entry_reponer_kilos.pack(side="left", padx=(0, 8))
+        self.entry_reponer_kilos.bind("<Return>", lambda e: self.reponer_stock())
+        ttk.Button(barra_stock, text="Reponer stock", style="Accent.TButton",
+                   command=self.reponer_stock).pack(side="left")
+
         self.tabla_potes = self._tabla(cuerpo, [
             ("id", "Pote", 50, "center"),
-            ("sabor", "Sabor", 180, "w"),
-            ("elaboracion", "Elaboración", 100, "w"),
-            ("fecha", "Incorporado", 100, "center"),
+            ("sabor", "Sabor", 170, "w"),
+            ("elaboracion", "Elaboración", 95, "w"),
+            ("fecha", "Incorporado", 95, "center"),
+            ("stock", "Stock (kg)", 85, "e"),
             ("kilos", "Kg servidos", 90, "e"),
-            ("recaudado", "Recaudado", 110, "e"),
+            ("recaudado", "Recaudado", 105, "e"),
         ], alto=5)
 
     # ---------- Pestaña: Resumen ----------
@@ -549,10 +667,10 @@ class HeladeriaGUI:
             self._sin_ventas()
             return
         ttk.Label(self.frame_resultado, text=valor, style="Grande.TLabel",
-                  wraplength=480, justify="left").pack(anchor="w")
+                  wraplength=650, justify="left").pack(anchor="w")
         if detalle:
             ttk.Label(self.frame_resultado, text=detalle, style="Suave.TLabel",
-                      wraplength=480, justify="left").pack(anchor="w", pady=(6, 0))
+                      wraplength=650, justify="left").pack(anchor="w", pady=(6, 0))
 
     def _mostrar_barras(self, titulo, datos):
         """Porcentajes como grafico de barras horizontales, de mayor a menor."""
@@ -600,6 +718,7 @@ class HeladeriaGUI:
         self.entry_sabor_precio.delete(0, tk.END)
         self.combo_elaboracion.set("")
         self.entry_sabor_nombre.focus()
+        guardar_json(self.heladeria)
         self.refrescar()
         self._avisar(f"Sabor agregado: {sabor}")
 
@@ -621,6 +740,7 @@ class HeladeriaGUI:
         for entrada in (self.entry_recip_nombre, self.entry_recip_kilos, self.entry_recip_incremento):
             entrada.delete(0, tk.END)
         self.entry_recip_nombre.focus()
+        guardar_json(self.heladeria)
         self.refrescar()
         self._avisar(f"Recipiente agregado: {recipiente}")
 
@@ -638,8 +758,26 @@ class HeladeriaGUI:
         sabor = self.heladeria.sabores[idx]
         pote = Pote(len(self.heladeria.potes) + 1, sabor, fecha)
         self.heladeria.agregar_pote(pote)
+        guardar_json(self.heladeria)
         self.refrescar()
         self._avisar(f"Pote #{pote.id} de {sabor.nombre} agregado.")
+
+    def reponer_stock(self):
+        idx = self.combo_reponer_pote.current()
+        if idx < 0:
+            self._avisar("Elegí un pote para reponer stock.", error=True)
+            return
+        try:
+            kilos = float(self.entry_reponer_kilos.get().replace(",", "."))
+            pote = self.heladeria.potes[idx]
+            pote.reponer_stock(kilos)
+        except ValueError:
+            self._avisar("Ingresá una cantidad de kilos mayor a 0.", error=True)
+            return
+        self.entry_reponer_kilos.delete(0, tk.END)
+        guardar_json(self.heladeria)
+        self.refrescar()
+        self._avisar(f"Stock repuesto en {pote.sabor.nombre}: ahora tiene {pote.stock_kg:.2f} kg.")
 
     # ---------- Venta ----------
     def registrar_venta(self):
@@ -652,8 +790,11 @@ class HeladeriaGUI:
         try:
             venta = self.heladeria.vender(potes, recipiente)
         except ValueError as err:
-            self._avisar(str(err), error=True)
+            mensaje = str(err)
+            self._avisar(mensaje.splitlines()[0], error=True)
+            messagebox.showwarning("Alerta de reposición de stock", mensaje)
             return
+        guardar_json(self.heladeria)
         self.refrescar()
         self._avisar(f"Venta registrada: {venta.kilos:g} kg ({venta.nombres_sabores()}) en "
                      f"{recipiente.nombre} por {formato_dinero(venta.calcular_precio_total())}")
@@ -662,13 +803,14 @@ class HeladeriaGUI:
     def refrescar(self):
         h = self.heladeria
         opciones_sabores = [
-            f"{p.sabor.nombre} · {p.sabor.elaboracion} · {formato_dinero(p.sabor.precio_por_kilo)}/kg"
+            f"{p.sabor.nombre} · {p.sabor.elaboracion} · {formato_dinero(p.sabor.precio_por_kilo)}/kg · Stock: {p.stock_kg:.2f} kg"
             for p in h.potes
         ]
         # Combos (se conserva lo que estaba elegido)
         combos = [
             (self.combo_pote_sabor, [f"{s.nombre} · {s.elaboracion} · "
                                      f"{formato_dinero(s.precio_por_kilo)}/kg" for s in h.sabores]),
+            (self.combo_reponer_pote, [f"Pote #{p.id} · {p.sabor.nombre} ({p.stock_kg:.2f} kg)" for p in h.potes]),
             (self.combos_venta_sabores[0], opciones_sabores),
             (self.combos_venta_sabores[1], ["(Sin 2° sabor)"] + opciones_sabores),
             (self.combos_venta_sabores[2], ["(Sin 3° sabor)"] + opciones_sabores),
@@ -691,7 +833,7 @@ class HeladeriaGUI:
         ])
         self._llenar_tabla(self.tabla_potes, [
             (p.id, p.sabor.nombre, p.sabor.elaboracion, p.fecha_incorporacion,
-             f"{p.kilos_servidos:.2f}", formato_dinero(p.dinero_recaudado))
+             f"{p.stock_kg:.2f}", f"{p.kilos_servidos:.2f}", formato_dinero(p.dinero_recaudado))
             for p in h.potes
         ])
 
@@ -787,23 +929,7 @@ class HeladeriaGUI:
 
 if __name__ == "__main__":
     heladeria = Heladeria()
-
-    ruta_json = Path(__file__).parent / "scripts" / "sabores_iniciales.json"
-    for item in json.loads(ruta_json.read_text(encoding="utf-8")):
-        sabor = Sabor(item["id"], item["nombre"], item["elaboracion"], item["precio"])
-        heladeria.agregar_sabor(sabor)
-        heladeria.agregar_pote(Pote(item["id"], sabor, item["fecha"]))
-
-    # Tamaños de pote / presentaciones cargados desde JSON (polimorfismo en 2 clases, sin ifs)
-    clases_presentacion = {
-        "Recipiente": Recipiente,
-        "PresentacionPorPorcion": PresentacionPorPorcion,
-    }
-    ruta_tamanos = Path(__file__).parent / "scripts" / "tamanos_pote.json"
-    for item in json.loads(ruta_tamanos.read_text(encoding="utf-8")):
-        datos = dict(item)
-        cls = clases_presentacion[datos.pop("clase")]
-        heladeria.agregar_recipiente(cls(**datos))
+    cargar_json(heladeria)
 
     gui = HeladeriaGUI(heladeria)
     gui.iniciar()
