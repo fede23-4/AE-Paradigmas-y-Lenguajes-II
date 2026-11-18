@@ -1,0 +1,71 @@
+{
+  "combos": [
+    {
+      "id": 1,
+      "nombre": "Combo para compartir",
+      "descripcion": "Kilo con cucuruchos para todos",
+      "recipiente_id": 1,
+      "sabores_ids": [
+        6,
+        7,
+        9,
+        10
+      ],
+      "extras": [
+        {
+          "id": 1,
+          "cantidad": 4
+        },
+        {
+          "id": 4,
+          "cantidad": 1
+        }
+      ],
+      "salsas_ids": [
+        6,
+        5
+      ],
+      "descuento_pct": 0.0
+    },
+    {
+      "id": 2,
+      "nombre": "Combo antojo",
+      "descripcion": "Cuarto kilo con dos vasitos",
+      "recipiente_id": 3,
+      "sabores_ids": [
+        8,
+        4
+      ],
+      "extras": [
+        {
+          "id": 3,
+          "cantidad": 2
+        }
+      ],
+      "salsas_ids": [
+        7
+      ],
+      "descuento_pct": 0.0
+    },
+    {
+      "id": 3,
+      "nombre": "Combo Nuevo",
+      "descripcion": "Medio kilo, sin salsa con vasitos (Sin bolsa termica)",
+      "recipiente_id": 2,
+      "sabores_ids": [
+        2,
+        1,
+        6,
+        10
+      ],
+      "extras": [
+        {
+          "id": 3,
+          "cantidad": 3
+        }
+      ],
+      "salsas_ids": [],
+      "descuento_pct": 12.0
+    }
+  ]
+}

@@ -3,80 +3,60 @@
     "id": 1,
     "nombre": "Vainilla",
     "elaboracion": "industrial",
-    "precio": 12000,
-    "fecha": "2026-11-15",
-    "stock_kg": 1.0
+    "precio": 12000
   },
   {
     "id": 2,
     "nombre": "Crema del cielo",
     "elaboracion": "industrial",
-    "precio": 12000,
-    "fecha": "2026-11-15",
-    "stock_kg": 4.0
+    "precio": 12000
   },
   {
     "id": 3,
     "nombre": "Granizado",
     "elaboracion": "industrial",
-    "precio": 12000,
-    "fecha": "2026-11-15",
-    "stock_kg": 4.0
+    "precio": 12000
   },
   {
     "id": 4,
     "nombre": "Chocolate blanco",
     "elaboracion": "industrial",
-    "precio": 12000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 12000
   },
   {
     "id": 5,
     "nombre": "Cereza",
     "elaboracion": "industrial",
-    "precio": 12000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 12000
   },
   {
     "id": 6,
     "nombre": "Chocolate amargo",
     "elaboracion": "artesanal",
-    "precio": 15000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 15000
   },
   {
     "id": 7,
     "nombre": "Frutilla",
     "elaboracion": "artesanal",
-    "precio": 15000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 15000
   },
   {
     "id": 8,
     "nombre": "Tiramisú",
     "elaboracion": "artesanal",
-    "precio": 15000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 15000
   },
   {
     "id": 9,
     "nombre": "Sambayón",
     "elaboracion": "artesanal",
-    "precio": 15000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 15000
   },
   {
     "id": 10,
     "nombre": "Pistacho",
     "elaboracion": "artesanal",
-    "precio": 15000,
-    "fecha": "2026-11-15",
-    "stock_kg": 5.0
+    "precio": 15000
   }
 ]

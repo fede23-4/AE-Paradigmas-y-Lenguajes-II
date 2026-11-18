@@ -3,36 +3,60 @@
     "potes_ids": [
       1
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   },
   {
     "potes_ids": [
       1
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   },
   {
     "potes_ids": [
       1
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   },
   {
     "potes_ids": [
       2
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   },
   {
     "potes_ids": [
       3
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   },
   {
     "potes_ids": [
       1
     ],
-    "recipiente_id": 1
+    "recipiente_id": 1,
+    "extras": [],
+    "salsas_ids": [],
+    "descuento_pct": 0.0,
+    "combo_id": null
   }
 ]

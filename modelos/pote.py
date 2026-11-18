@@ -1,7 +1,8 @@
 class Pote:
     STOCK_MINIMO_KG = 1.0
+    STOCK_INICIAL_KG = 5.0
 
-    def __init__(self, id, sabor, fecha_incorporacion, stock_kg: float = 5.0):
+    def __init__(self, id, sabor, fecha_incorporacion, stock_kg: float = STOCK_INICIAL_KG):
         self.id = id
         self.sabor = sabor
         self.fecha_incorporacion = fecha_incorporacion

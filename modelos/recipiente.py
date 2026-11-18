@@ -28,6 +28,18 @@ class Recipiente:
         return (f"{len(potes)} sabor(es) ({gramos_por_sabor:g} g c/u) · "
                 f"{self.kilos:g} kg total (+{self.porcentaje_incremento:g}%)")
 
+    def texto_peso(self):
+        return f"{self.kilos:g} kg" if self.kilos >= 1 else f"{self.kilos * 1000:g} g"
+
+    def prefijo_precio(self):
+        """El precio por peso depende de los sabores: se muestra 'desde'."""
+        return "desde "
+
+    def descripcion_precio(self):
+        if self.porcentaje_incremento:
+            return f"+{self.porcentaje_incremento:g}% sobre el kilo"
+        return "precio por kilo"
+
     def __str__(self):
         return f"{self.nombre} ({self.kilos:g} kg)"
 
@@ -51,6 +63,12 @@ class PresentacionPorPorcion(Recipiente):
         gramos = self.kilos * 1000
         return (f"{self.nombre} · {gramos:g} g "
                 f"(${self.precio_fijo:,.0f} fijos · hasta {self.max_sabores} sabores)".replace(",", "."))
+
+    def prefijo_precio(self):
+        return ""
+
+    def descripcion_precio(self):
+        return "precio fijo"
 
     def detalle_precio(self, potes):
         gramos_por_sabor = (self.kilos * 1000) / len(potes)

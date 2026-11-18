@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "clase": "Extra",
+    "nombre": "Cucurucho",
+    "precio": 500.0
+  },
+  {
+    "id": 2,
+    "clase": "Extra",
+    "nombre": "Cucurucho bañado",
+    "precio": 900.0
+  },
+  {
+    "id": 3,
+    "clase": "Extra",
+    "nombre": "Vasito",
+    "precio": 300.0
+  },
+  {
+    "id": 4,
+    "clase": "Extra",
+    "nombre": "Bolsa térmica",
+    "precio": 1500.0
+  },
+  {
+    "id": 5,
+    "clase": "Salsa",
+    "nombre": "Chocolate"
+  },
+  {
+    "id": 6,
+    "clase": "Salsa",
+    "nombre": "Dulce de leche"
+  },
+  {
+    "id": 7,
+    "clase": "Salsa",
+    "nombre": "Caramelo"
+  },
+  {
+    "id": 8,
+    "clase": "Salsa",
+    "nombre": "Frutilla"
+  }
+]
